@@ -39,7 +39,7 @@ print_message "Шаг 5: Настройка автозагрузки сhromium..
 
 {
     echo "sleep 5"
-    echo "MOZ_GTK_TITLEBAR_DECORATION=client сhromium &>/dev/null &"
+    сhromium --no-sandbox &>/dev/null &"
 } > /root/.config/openbox/autostart || check_error "Не удалось создать autostart файл"
 
 chmod +x /root/.config/openbox/autostart || check_error "Не удалось сделать autostart исполняемым"
