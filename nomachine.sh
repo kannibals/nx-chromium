@@ -39,7 +39,7 @@ print_message "Шаг 5: Настройка автозагрузки сhromium..
 
 {
     echo "sleep 5"
-    echo "сhromium --no-sandbox &>/dev/null &"
+    echo "chromium --no-sandbox --start-maximized --no-first-run --disable-default-apps --disable-popup-blocking --disable-infobars &>/dev/null &"
 } > /root/.config/openbox/autostart || check_error "Не удалось создать autostart файл"
 
 chmod +x /root/.config/openbox/autostart || check_error "Не удалось сделать autostart исполняемым"
