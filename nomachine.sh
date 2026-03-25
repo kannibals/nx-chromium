@@ -33,7 +33,7 @@ mkdir -p /root/.config/openbox || check_error "Не удалось создат�
 echo "openbox-session" > /root/.xsession || check_error "Не удалось настроить сессию Openbox"
 
 print_message "Шаг 4: Установка сhromium"
-snap install сhromium || check error "Не удалось установить сhromium"
+snap install chromium || check error "Не удалось установить сhromium"
 
 print_message "Шаг 5: Настройка автозагрузки сhromium..."
 
