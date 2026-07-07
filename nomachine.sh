@@ -4,22 +4,31 @@ export DEBIAN_FRONTEND=noninteractive
 print_msg() { echo -e "\e[1;32m>>> $1\e[0m"; }
 check_err() { if [ "$1" -ne 0 ]; then echo -e "\e[1;31mОшибка: $2\e[0m" >&2; exit 1; fi; }
 
-print_msg "Настройка APT приоритетов..."
+print_msg "Установка базовых утилит для работы с репозиториями..."
+apt update -yq && apt install -yq software-properties-common gnupg wget
+
+print_msg "Настройка APT приоритетов и добавление PPA..."
 
 rm -f /etc/apt/sources.list.d/debian.list
 rm -f /etc/apt/preferences.d/debian-chromium.pref
 
+# Блокируем snap-версию chromium
 cat << 'EOF' > /etc/apt/preferences.d/nosnap.pref
 Package: chromium-browser*
 Pin: release *
 Pin-Priority: -1
 EOF
 
+# Задаем высший приоритет для PPA xtradeb
 cat << 'EOF' > /etc/apt/preferences.d/xtradeb-chromium.pref
 Package: chromium chromium-common chromium-sandbox
 Pin: release o=LP-PPA-xtradeb-apps
 Pin-Priority: 1000
 EOF
+
+# Интеграция PPA xtradeb напрямую
+sudo add-apt-repository ppa:xtradeb/apps -y
+check_err $? "Не удалось добавить PPA репозиторий xtradeb"
 
 # ----Установка NoMachine----
 print_msg "Установка NoMachine..."
@@ -46,8 +55,9 @@ fi
 rm -f "$FILE"
 
 # ----Установка Openbox и Chromium----
-print_msg "Установка Openbox и Chromium"
-apt install -yq openbox chromium chromium-sandbox
+print_msg "Установка Openbox и Chromium (.deb)..."
+# chromium-sandbox удален из списка, так как он встроен в основной пакет chromium
+apt install -yq openbox chromium
 check_err $? "Не удалось установить Openbox или Chromium"
 
 # ----Настройка окружения и Автозагрузки Chromium----
@@ -62,7 +72,7 @@ EOF
 chmod +x /root/.config/openbox/autostart
 
 # ----Настройка UFW(Только порт 4000)----
-print_msg "Проверка порта 4000 в UFW..."
+print_msg "Проверка端口 4000 в UFW..."
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     if ! ufw status numbered | grep -q "4000"; then
         echo "Открываем порт 4000..."
@@ -75,4 +85,5 @@ else
 fi
 
 # ----Финал----
+print_msg "Скрипт успешно выполнен!"
 print_msg "IP сервера: $(hostname -I | awk '{print $1}')"
