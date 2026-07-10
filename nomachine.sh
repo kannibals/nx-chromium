@@ -4,31 +4,20 @@ export DEBIAN_FRONTEND=noninteractive
 print_msg() { echo -e "\e[1;32m>>> $1\e[0m"; }
 check_err() { if [ "$1" -ne 0 ]; then echo -e "\e[1;31mОшибка: $2\e[0m" >&2; exit 1; fi; }
 
-print_msg "Установка базовых утилит для работы с репозиториями..."
-apt update -yq && apt install -yq software-properties-common gnupg wget
+print_msg "Установка базовых утилит..."
+apt update -yq && apt install -yq software-properties-common gnupg wget curl
+check_err $? "Не удалось установить базовые утилиты"
 
-print_msg "Настройка APT приоритетов и добавление PPA..."
+# ----Добавление официального репозитория Google Chrome----
+print_msg "Настройка официального репозитория Google Chrome..."
 
-rm -f /etc/apt/sources.list.d/debian.list
-rm -f /etc/apt/preferences.d/debian-chromium.pref
+# Скачиваем официальный GPG-ключ Google
+install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg
+check_err $? "Не удалось импортировать GPG-ключ Google"
 
-# Блокируем snap-версию chromium
-cat << 'EOF' > /etc/apt/preferences.d/nosnap.pref
-Package: chromium-browser*
-Pin: release *
-Pin-Priority: -1
-EOF
-
-# Задаем высший приоритет для PPA xtradeb
-cat << 'EOF' > /etc/apt/preferences.d/xtradeb-chromium.pref
-Package: chromium chromium-common chromium-sandbox
-Pin: release o=LP-PPA-xtradeb-apps
-Pin-Priority: 1000
-EOF
-
-# Интеграция PPA xtradeb напрямую
-sudo add-apt-repository ppa:xtradeb/apps -y
-check_err $? "Не удалось добавить PPA репозиторий xtradeb"
+# Добавляем репозиторий в источники APT
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
 
 # ----Установка NoMachine----
 print_msg "Установка NoMachine..."
@@ -54,25 +43,25 @@ if [ $? -ne 0 ]; then
 fi
 rm -f "$FILE"
 
-# ----Установка Openbox и Chromium----
-print_msg "Установка Openbox и Chromium (.deb)..."
-# chromium-sandbox удален из списка, так как он встроен в основной пакет chromium
-apt install -yq openbox chromium
-check_err $? "Не удалось установить Openbox или Chromium"
+# ----Установка Openbox и Google Chrome----
+print_msg "Установка Openbox и Google Chrome..."
+apt install -yq openbox google-chrome-stable
+check_err $? "Не удалось установить Openbox или Google Chrome"
 
-# ----Настройка окружения и Автозагрузки Chromium----
+# ----Настройка окружения и Автозагрузки Google Chrome----
 print_msg "Настройка сессии и автозапуска..."
 mkdir -p /root/.config/openbox
 echo "openbox-session" > /root/.xsession
 
+# Заменяем chromium на google-chrome-stable с флагами оптимизации
 cat << 'EOF' > /root/.config/openbox/autostart
 sleep 3
-chromium --no-sandbox --start-maximized --no-first-run --disable-default-apps --disable-popup-blocking --disable-infobars &>/dev/null &
+google-chrome-stable --no-sandbox --start-maximized --no-first-run --disable-default-apps --disable-popup-blocking --disable-infobars &>/dev/null &
 EOF
 chmod +x /root/.config/openbox/autostart
 
-# ----Настройка UFW(Только порт 4000)----
-print_msg "Проверка端口 4000 в UFW..."
+# ----Настройка UFW (Только порт 4000)----
+print_msg "Проверка порта 4000 в UFW..."
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     if ! ufw status numbered | grep -q "4000"; then
         echo "Открываем порт 4000..."
